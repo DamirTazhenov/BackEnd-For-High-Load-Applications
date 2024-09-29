@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+  # Django application instance 1
+  django1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django1
+    environment:
+      - DEBUG=1
+    ports:
+      - "8001:8000"
+    volumes:
+      - .:/app
+
+  # Django application instance 2
+  django2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django2
+    environment:
+      - DEBUG=1
+    ports:
+      - "8002:8000"
+    volumes:
+      - .:/app
+
+  # NGINX load balancer
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: nginx_lb
+    ports:
+      - "80:80"
+    depends_on:
+      - django1
+      - django2
+
+  # Redis (for caching/sessions if necessary)
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"

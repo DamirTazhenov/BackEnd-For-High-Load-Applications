@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Tags</h1>
+  <ul>
+    {% for tag in tags %}
+      <li>
+        <h2>{{ tag.name }}</h2>
+        <ul>
+          {% for post in tag.posts.all %}
+            <li>
+              <a href="{% url 'post_detail_with_comments' post.id %}">{{ post.title }}</a> by {{ post.author.username }}
+            </li>
+          {% endfor %}
+        </ul>
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

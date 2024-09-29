@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>{{ post.title }}</h1>
+  <p>{{ post.content }}</p>
+
+  <h2>Recent Comments</h2>
+
+  <!-- Cache the fragment for 60 seconds -->
+  {% cache 60 recent_comments post.id %}
+    <ul>
+      {% for comment in post.comments.order_by('-created_date')[:5] %}
+        <li>{{ comment.author.username }}: {{ comment.content }} ({{ comment.created_date }})</li>
+      {% endfor %}
+    </ul>
+  {% endcache %}
+{% endblock %}
