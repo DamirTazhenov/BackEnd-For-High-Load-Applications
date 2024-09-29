@@ -1,12 +1,12 @@
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login
+from django.contrib.auth import login, authenticate, logout
 from django.core.paginator import Paginator
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.exceptions import PermissionDenied
 from .models import Post
-from .forms import PostForm, RegistrationForm, CommentForm
+from .forms import PostForm, RegistrationForm, CommentForm, CustomLoginForm
 
 
 def hello_message(request):
@@ -21,6 +21,7 @@ def post_list(request):
     page_obj = paginator.get_page(page_number)
 
     return render(request, 'blog/posts/post_list.html', {'page_obj': page_obj})
+
 
 @login_required
 def post_detail(request, pk):
@@ -44,6 +45,7 @@ def post_detail(request, pk):
         'comment_form': comment_form
     })
 
+
 @login_required
 def post_create(request):
     if request.method == 'POST':
@@ -57,6 +59,7 @@ def post_create(request):
         form = PostForm()
 
     return render(request, 'blog/posts/post_create.html', {'form': form})
+
 
 @login_required
 def post_edit(request, pk):
@@ -75,6 +78,7 @@ def post_edit(request, pk):
 
     return render(request, 'blog/posts/post_edit.html', {'form': form})
 
+
 @login_required
 def post_delete(request, pk):
     post = get_object_or_404(Post, pk=pk)
@@ -89,6 +93,22 @@ def post_delete(request, pk):
     return render(request, 'blog/posts/post_delete_confirmation.html', {'post': post})
 
 
+def custom_login_view(request):
+    if request.method == 'POST':
+        form = CustomLoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('post_list')
+    else:
+        form = CustomLoginForm()
+
+    return render(request, 'registration/login.html', {'form': form})
+
+
 def register(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
@@ -99,4 +119,9 @@ def register(request):
     else:
         form = RegistrationForm()
 
-    return render(request, 'registration/register.html', {'form': form})
+    return render(request, 'registration/registration.html', {'form': form})
+
+
+def custom_logout_view(request):
+    logout(request)
+    return redirect('login')

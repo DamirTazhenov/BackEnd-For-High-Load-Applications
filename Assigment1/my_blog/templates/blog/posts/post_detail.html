@@ -10,6 +10,11 @@
         {{ post.content }}
     </div>
 
+    {% if user == post.author %}
+        <a href="{% url 'post_edit' post.pk %}">Edit Post</a> |
+        <a href="{% url 'post_delete' post.pk %}">Delete Post</a>
+    {% endif %}
+
     <h2>Comments</h2>
     <ul>
         {% for comment in comments %}
