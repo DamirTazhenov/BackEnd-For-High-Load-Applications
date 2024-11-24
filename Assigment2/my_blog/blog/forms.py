@@ -15,6 +15,7 @@ class CommentForm(forms.ModelForm):
         model = Comment
         fields = ['content']
 
+
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True)
 

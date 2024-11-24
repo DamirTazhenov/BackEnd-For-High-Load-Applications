@@ -1,0 +1,33 @@
+<h1>Upload File</h1>
+<form method="post" enctype="multipart/form-data" id="uploadForm">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+</form>
+
+<div id="progress"></div>
+<div id="status"></div>
+<div id="error"></div>
+
+<script>
+document.getElementById('uploadForm').onsubmit = function(event) {
+    event.preventDefault();
+
+    const formData = new FormData(this);
+
+    fetch("{% url 'upload_file' %}", {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.file_id) {
+            // Start tracking progress
+            trackProgress(data.file_id);
+        } else {
+            console.error('Error uploading file:', data);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+};
+</script>

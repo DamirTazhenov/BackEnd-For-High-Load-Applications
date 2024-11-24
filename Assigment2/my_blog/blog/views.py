@@ -4,10 +4,13 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Prefetch
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
-from .models import Post, Comment, User, Tag
+from .models import Post, Comment, Tag
 from .forms import PostForm, CustomLoginForm, RegistrationForm
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 @cache_page(60)
@@ -30,6 +33,7 @@ def post_detail_with_comments(request, post_id):
     comments = Comment.objects.filter(post=post).select_related('author').order_by('-created_date')
 
     return render(request, 'posts/post_detail.html', {'post': post, 'comments': comments})
+
 
 def post_detail_with_comment_count(request, post_id):
     post = get_object_or_404(Post, id=post_id)
@@ -59,9 +63,12 @@ def list_posts_by_author(request, username):
 def create_post(request):
     if request.method == 'POST':
         form = PostForm(request.POST)
+
+
+        print(request.user)
         if form.is_valid():
             post = form.save(commit=False)
-            post.author = request.user
+            post.author = User.objects.get(id=request.user.id)
             post.save()
             form.save_m2m()  # Save the many-to-many tags relationship in a separate query
 
@@ -95,6 +102,7 @@ def invalidate_comment_count_cache(sender, instance, **kwargs):
     cache_key = f'comment_count_{instance.post.id}'
     cache.delete(cache_key)  # Invalidate cache when a new comment is added
 
+
 def custom_login_view(request):
     if request.method == 'POST':
         form = CustomLoginForm(request, data=request.POST)
@@ -104,7 +112,7 @@ def custom_login_view(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
-                return redirect('post_list')
+                return redirect('list_posts_with_comments')
     else:
         form = CustomLoginForm()
 
@@ -117,7 +125,7 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('post_list')
+            return redirect('list_posts_with_comments')
     else:
         form = RegistrationForm()
 

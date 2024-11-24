@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+
 class User(AbstractUser):
     bio = models.TextField(null=True, blank=True)
 
@@ -21,10 +22,15 @@ class User(AbstractUser):
     )
 
 
+from django.contrib.auth import get_user_model
+
+UserModel = get_user_model()
+
+
 class Post(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(UserModel, on_delete=models.CASCADE)
     created_date = models.DateTimeField(auto_now_add=True)
     tags = models.ManyToManyField('Tag', related_name='posts')
 
@@ -46,7 +52,7 @@ class Tag(models.Model):
 
 class Comment(models.Model):
     post = models.ForeignKey(Post, related_name='comments', on_delete=models.CASCADE)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(UserModel, on_delete=models.CASCADE)
     content = models.TextField()
     created_date = models.DateTimeField(auto_now_add=True)
 

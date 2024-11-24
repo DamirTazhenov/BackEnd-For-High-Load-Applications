@@ -1,0 +1,3 @@
+venv
+/distributed_kv_store/.env
+/.idea
