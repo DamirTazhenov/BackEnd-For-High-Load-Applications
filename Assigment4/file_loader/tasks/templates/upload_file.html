@@ -10,24 +10,18 @@
 <div id="error"></div>
 
 <script>
-document.getElementById('uploadForm').onsubmit = function(event) {
-    event.preventDefault();
+function checkStatus(taskId) {
+    setInterval(() => {
+        fetch(`/task-status/${taskId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').innerText = `Status: ${data.status}`;
+                document.getElementById('progress').innerText = `Progress: ${data.progress || 0}%`;
 
-    const formData = new FormData(this);
-
-    fetch("{% url 'upload_file' %}", {
-        method: 'POST',
-        body: formData,
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.file_id) {
-            // Start tracking progress
-            trackProgress(data.file_id);
-        } else {
-            console.error('Error uploading file:', data);
-        }
-    })
-    .catch(error => console.error('Error:', error));
-};
+                if (data.status === 'completed' || data.status === 'failed') {
+                    clearInterval();
+                }
+            });
+    }, 2000);
+}
 </script>

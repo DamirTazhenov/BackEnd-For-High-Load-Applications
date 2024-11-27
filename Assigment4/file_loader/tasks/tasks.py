@@ -10,31 +10,57 @@ from .pyclamd import scan_file_for_malware
 
 
 @shared_task(bind=True)
-def process_file(self, uploaded_file_id):
+def scan_file_task(self, uploaded_file_id, *args, **kwargs):
+
+    uploaded_file = UploadedFile.objects.get(id=uploaded_file_id)
+
     try:
-        # Fetch the UploadedFile instance
-        uploaded_file = UploadedFile.objects.get(id=uploaded_file_id)
-        scan_file_for_malware(uploaded_file.file.path)
+        uploaded_file.status = 'scanning'
+        uploaded_file.save()
+
+        scan_result = scan_file_for_malware(uploaded_file.file.path)
+        if "Malware detected" in scan_result:
+            uploaded_file.status = 'failed'
+            uploaded_file.error_message = scan_result
+            uploaded_file.save()
+            return {"status": "failed", "message": scan_result}
+
+        uploaded_file.status = 'processing'
+        uploaded_file.save()
+        return uploaded_file_id
+
+    except Exception as e:
+        uploaded_file.status = 'failed'
+        uploaded_file.error_message = str(e)
+        uploaded_file.save()
+        raise
+
+@shared_task(bind=True)
+def process_file_task(self, uploaded_file_id, *args, **kwargs):
+    from .models import UploadedFile
+    import csv
+
+    uploaded_file = UploadedFile.objects.get(id=uploaded_file_id)
+    try:
         uploaded_file.status = 'processing'
         uploaded_file.save()
 
-        # Simulate processing (e.g., validate CSV data)
         file_path = uploaded_file.file.path
         with open(file_path, newline='') as csvfile:
             reader = csv.reader(csvfile)
             total_rows = sum(1 for _ in reader)
-            csvfile.seek(0)  # Reset the file pointer
+            csvfile.seek(0)
 
             for i, row in enumerate(reader):
-                # Simulate validation or processing
                 self.update_state(state='PROGRESS', meta={'current': i + 1, 'total': total_rows})
                 uploaded_file.progress = int((i + 1) / total_rows * 100)
                 uploaded_file.save()
 
-        # Mark as completed
         uploaded_file.status = 'completed'
         uploaded_file.progress = 100
         uploaded_file.save()
+        return {"status": "success"}
+
     except Exception as e:
         uploaded_file.status = 'failed'
         uploaded_file.error_message = str(e)

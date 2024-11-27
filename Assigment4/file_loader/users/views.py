@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.shortcuts import redirect, render
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -61,22 +62,28 @@ class ConfirmEmailView(generics.GenericAPIView):
         code = request.data.get("confirmation_code")
         email = request.data.get("email")
 
+        # Fetch confirmation code from Redis cache
+        cached_code = cache.get(f"email_confirmation_{email}")
+        if not cached_code:
+            return Response({"error": "Confirmation code has expired or is invalid."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if cached_code != code:
+            return Response({"error": "Invalid confirmation code."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             user = User.objects.get(email=email)
             email_confirmation = user.email_confirmation
 
-            if email_confirmation.confirmation_code != code:
-                return Response({"error": "Invalid confirmation code."}, status=status.HTTP_400_BAD_REQUEST)
-
             if email_confirmation.is_confirmed:
                 return Response({"message": "Email already confirmed."}, status=status.HTTP_400_BAD_REQUEST)
 
-            if email_confirmation.is_expired():
-                return Response({"error": "Confirmation code has expired."}, status=status.HTTP_400_BAD_REQUEST)
-
             email_confirmation.is_confirmed = True
             email_confirmation.save()
+
+            cache.delete(f"email_confirmation_{email}")
+
             return Response({"message": "Email confirmed successfully."}, status=status.HTTP_200_OK)
+
         except User.DoesNotExist:
             return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
         except EmailConfirmation.DoesNotExist:

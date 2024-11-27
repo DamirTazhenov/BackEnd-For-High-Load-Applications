@@ -1,4 +1,5 @@
 from django.contrib import admin
-from .models import Email
+from .models import Email, UploadedFile
 
-admin.register(Email)
+admin.site.register(Email)
+admin.site.register(UploadedFile)

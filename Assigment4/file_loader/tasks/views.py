@@ -1,14 +1,19 @@
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from .pyclamd import scan_file_for_malware
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.views.decorators.cache import cache_page
 
 from .forms import FileUploadForm
 from .models import Email, UploadedFile
 from .serializers import EmailSerializer
-from .tasks import send_email_task, process_file
+from .tasks import send_email_task, scan_file_task, process_file_task
 
+from celery import chain
+from celery.result import AsyncResult
 
 class EmailViewSet(viewsets.ModelViewSet):
     queryset = Email.objects.all()
@@ -39,27 +44,42 @@ class SendEmailAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@cache_page(60 * 15)
+@login_required
 def upload_file(request):
     if request.method == 'POST':
         form = FileUploadForm(request.POST, request.FILES)
         if form.is_valid():
             uploaded_file = form.save(commit=False)
             uploaded_file.user = request.user
+            uploaded_file.status = 'pending'
             uploaded_file.save()
 
-            # Trigger the Celery task
-            process_file.delay(uploaded_file.id)
+            task_chain = chain(
+                scan_file_task.s(uploaded_file.id),
+                process_file_task.s(uploaded_file.id)
+            )
 
-            # Return the file ID for progress tracking
-            return JsonResponse({'file_id': uploaded_file.id})
+            result = task_chain.apply_async()
 
-    return JsonResponse({'error': 'Invalid file upload'}, status=400)
+            return JsonResponse({
+                "status": "success",
+                "message": "File uploaded successfully. Scanning will start shortly.",
+                "task_id": result.id
+            })
+        return JsonResponse({
+            "status": "failed",
+            "errors": form.errors
+        }, status=400)
+    else:
+        form = FileUploadForm()
+
+    return render(request, 'upload_file.html', {'form': form})
 
 
-def upload_status(request, file_id):
-    uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
+def task_status(request, task_id):
+    task = AsyncResult(task_id)
     return JsonResponse({
-        'status': uploaded_file.status,
-        'progress': uploaded_file.progress,
-        'error_message': uploaded_file.error_message,
+        "status": task.status,
+        "progress": task.info.get('progress') if task.info else None
     })

@@ -19,6 +19,8 @@ services:
       - .env
     ports:
       - "8000:8000"
+    volumes:
+      - ./secure_uploads:/app/secure_uploads
     depends_on:
       - db
   redis:
@@ -37,6 +39,8 @@ services:
     depends_on:
       - web
       - redis
+    volumes:
+      - ./secure_uploads:/app/secure_uploads
     deploy:
       restart_policy:
         condition: on-failure
@@ -77,3 +81,14 @@ services:
       --host=http://web:8000
     depends_on:
       - web
+  clamav:
+    image: mkodockx/docker-clamav:alpine
+    ports:
+      - "3310:3310"
+    environment:
+      - CLAMD_CONF=/etc/clamav/clamd.conf
+      - FRESHCLAM_CONF=/etc/clamav/freshclam.conf
+    volumes:
+      - ./secure_uploads:/app/secure_uploads
+volumes:
+  clamav-data:

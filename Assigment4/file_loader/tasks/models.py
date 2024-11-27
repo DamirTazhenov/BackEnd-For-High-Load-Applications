@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.core.files.storage import FileSystemStorage
 
+
 class Email(models.Model):
     recipient = models.EmailField()
     subject = models.CharField(max_length=255)
@@ -21,6 +22,7 @@ class Email(models.Model):
 
 secure_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
 
+
 class UploadedFile(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -30,9 +32,9 @@ class UploadedFile(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    file = models.FileField(upload_to='uploads/', storage=secure_storage)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    progress = models.PositiveIntegerField(default=0)  # Percentage progress
+    file = models.FileField(storage=secure_storage)
+    status = models.CharField(max_length=255, choices=STATUS_CHOICES, default='pending')
+    progress = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     error_message = models.TextField(blank=True, null=True)

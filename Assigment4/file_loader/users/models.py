@@ -19,9 +19,9 @@ class UserProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # Sensitive fields
-    phone_number = EncryptedCharField(max_length=15)  # Field for phone numbers
-    address = EncryptedCharField(max_length=255)      # Field for address
-    social_security_number = EncryptedCharField(max_length=11)  # Field for SSN (e.g., "123-45-6789")
+    phone_number = EncryptedCharField(max_length=15)
+    address = EncryptedCharField(max_length=255)
+    social_security_number = EncryptedCharField(max_length=12)
 
     def __str__(self):
         return self.user.username
@@ -34,7 +34,7 @@ class EmailConfirmation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_expired(self):
-        return now() > self.created_at + timedelta(minutes=30)
+        return now() > self.created_at + timedelta(minutes=15)
 
     def generate_code(self):
         """Generate a 6-digit numeric code."""

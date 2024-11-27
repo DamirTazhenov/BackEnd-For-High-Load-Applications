@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework import serializers
 from .models import User, EmailConfirmation, UserProfile
 from django.contrib.auth.password_validation import validate_password
@@ -40,8 +41,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name']
         )
-        # Create EmailConfirmation instance
         email_confirmation = EmailConfirmation.objects.create(user=user)
+
+        cache.set(f"email_confirmation_{user.email}", email_confirmation.confirmation_code, timeout=900)
 
         # Send confirmation email
         send_email_task.delay(
